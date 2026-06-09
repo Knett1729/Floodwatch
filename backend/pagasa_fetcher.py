@@ -37,12 +37,15 @@ from datetime import datetime, timezone
 logger = logging.getLogger(__name__)
 
 # ── Tuning constants ──────────────────────────────────────────────────────────
-BASE_WATER_LEVEL      = 0.3    # metres — dry baseline for coastal Talisay
-RUNOFF_COEFFICIENT    = 0.018  # m of water rise per mm of 6-hr accumulated rain
-MAX_WATER_ESTIMATE    = 5.0    # metres cap (physical limit)
-REFRESH_INTERVAL_MIN  = 15     # how often app.py should re-fetch (minutes)
-REQUEST_TIMEOUT_SEC   = 8      # per-barangay HTTP timeout
-INTER_REQUEST_DELAY   = 0.25   # seconds between API calls (be polite to free API)
+BASE_WATER_LEVEL       = 0.3    # metres — dry baseline for coastal Talisay
+RUNOFF_COEFFICIENT     = 0.018  # m of water rise per mm of 6-hr accumulated rain
+MAX_WATER_ESTIMATE     = 5.0    # metres cap (physical limit)
+REFRESH_INTERVAL_MIN   = 15     # how often app.py should re-fetch (minutes)
+REQUEST_TIMEOUT_SEC    = 8      # per-barangay HTTP timeout
+INTER_REQUEST_DELAY    = 1.25   # seconds between API calls (be polite to free API)
+MAX_FETCH_RETRIES      = 2      # retry on transient failures like 429
+RETRY_BACKOFF_SECONDS  = 5      # base backoff for retry escalation
+USER_AGENT            = "FloodWatch/1.0 (+https://github.com/Knett1729/Floodwatch)"
 
 # Open-Meteo endpoint — free, no auth, CC BY 4.0
 OPEN_METEO_URL = (
@@ -106,54 +109,88 @@ def estimate_water_level(rain_6hr_mm: list[float]) -> float:
     return round(min(wl, MAX_WATER_ESTIMATE), 2)
 
 
-def fetch_barangay(name: str, lat: float, lng: float) -> dict | None:
+def fetch_barangay(name: str, lat: float, lng: float, session: requests.Session | None = None) -> dict | None:
     """
     Fetch current precipitation + past 6h for one barangay from Open-Meteo.
 
     Returns a dict with keys: name, lat, lng, rain, rain_6hr, water,
     status, risk, source, fetched_at — or None on failure.
     """
+    if session is None:
+        session = requests.Session()
+    session.headers.update({
+        "User-Agent": USER_AGENT,
+        "Accept": "application/json",
+    })
     url = OPEN_METEO_URL.format(lat=lat, lng=lng)
-    try:
-        resp = requests.get(url, timeout=REQUEST_TIMEOUT_SEC)
-        resp.raise_for_status()
-        data = resp.json()
+    retries = 0
 
-        # Current rainfall (mm in this hour)
-        current = data.get("current", {})
-        rain_now = float(current.get("precipitation") or current.get("rain") or 0)
-        rain_now = round(rain_now, 1)
+    while retries <= MAX_FETCH_RETRIES:
+        try:
+            resp = session.get(url, timeout=REQUEST_TIMEOUT_SEC)
+            if resp.status_code == 429:
+                retry_after = resp.headers.get("Retry-After")
+                delay = RETRY_BACKOFF_SECONDS + (retries * 2)
+                if retry_after is not None and retry_after.isdigit():
+                    delay = max(delay, int(retry_after))
+                if retries < MAX_FETCH_RETRIES:
+                    logger.warning(f"Rate limited fetching {name}. Retrying in {delay}s...")
+                    time.sleep(delay)
+                    retries += 1
+                    continue
+                logger.warning(f"Rate limit reached for {name}. Giving up after {retries} retries.")
+                return None
 
-        # Past 6 hours of hourly precipitation
-        hourly     = data.get("hourly", {})
-        hourly_rain = hourly.get("precipitation", [])
-        # Open-Meteo returns past_hours=6 + forecast hours; take last 6 values up to now
-        rain_6hr = [float(v) if v is not None else 0.0
-                    for v in hourly_rain[-6:]]
+            resp.raise_for_status()
+            data = resp.json()
 
-        # Use current reading as the last hour if hourly is empty
-        if not rain_6hr:
-            rain_6hr = [rain_now]
+            # Current rainfall (mm in this hour)
+            current = data.get("current", {})
+            rain_now = float(current.get("precipitation") or current.get("rain") or 0)
+            rain_now = round(rain_now, 1)
 
-        water = estimate_water_level(rain_6hr)
+            # Past 6 hours of hourly precipitation
+            hourly      = data.get("hourly", {})
+            hourly_rain = hourly.get("precipitation", [])
+            # Open-Meteo returns past_hours=6 + forecast hours; take last 6 values up to now
+            rain_6hr = [float(v) if v is not None else 0.0
+                        for v in hourly_rain[-6:]]
 
-        return {
-            "name":       name,
-            "lat":        lat,
-            "lng":        lng,
-            "rain":       rain_now,
-            "rain_6hr":   [round(r, 1) for r in rain_6hr],
-            "water":      water,
-            "source":     "open-meteo",
-            "fetched_at": datetime.now(timezone.utc).isoformat(),
-        }
+            # Use current reading as the last hour if hourly is empty
+            if not rain_6hr:
+                rain_6hr = [rain_now]
 
-    except requests.exceptions.Timeout:
-        logger.warning(f"Timeout fetching {name}")
-    except requests.exceptions.RequestException as e:
-        logger.warning(f"Request error for {name}: {e}")
-    except (KeyError, ValueError, TypeError) as e:
-        logger.warning(f"Parse error for {name}: {e}")
+            water = estimate_water_level(rain_6hr)
+
+            return {
+                "name":       name,
+                "lat":        lat,
+                "lng":        lng,
+                "rain":       rain_now,
+                "rain_6hr":   [round(r, 1) for r in rain_6hr],
+                "water":      water,
+                "source":     "open-meteo",
+                "fetched_at": datetime.now(timezone.utc).isoformat(),
+            }
+
+        except requests.exceptions.Timeout:
+            logger.warning(f"Timeout fetching {name}")
+        except requests.exceptions.RequestException as e:
+            if hasattr(e, 'response') and e.response is not None and e.response.status_code == 429:
+                # Handled above, but keep safe fallback here.
+                logger.warning(f"Rate limit fetching {name}: {e}")
+            else:
+                logger.warning(f"Request error for {name}: {e}")
+        except (KeyError, ValueError, TypeError) as e:
+            logger.warning(f"Parse error for {name}: {e}")
+
+        retries += 1
+        if retries <= MAX_FETCH_RETRIES:
+            delay = RETRY_BACKOFF_SECONDS + (retries * 2)
+            logger.warning(f"Retrying {name} after {delay}s ({retries}/{MAX_FETCH_RETRIES})")
+            time.sleep(delay)
+        else:
+            break
 
     return None
 
@@ -172,9 +209,14 @@ def fetch_all_barangays(on_progress=None) -> dict:
     """
     results = {}
     total   = len(BARANGAY_COORDS)
+    session = requests.Session()
+    session.headers.update({
+        "User-Agent": USER_AGENT,
+        "Accept": "application/json",
+    })
 
     for i, (name, lat, lng) in enumerate(BARANGAY_COORDS):
-        reading = fetch_barangay(name, lat, lng)
+        reading = fetch_barangay(name, lat, lng, session=session)
         if reading:
             results[name] = reading
             logger.info(f"  [{i+1}/{total}] {name}: {reading['rain']} mm/hr, "
