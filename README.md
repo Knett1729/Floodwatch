@@ -5,8 +5,16 @@
 ### Frontend (Vercel)
 
 1. Deploy the root repository as a static site on Vercel.
-2. The HTML pages and JS files are ready to serve from the root.
-3. After the backend is deployed, update `js/config.js` to point `window.API_BASE` at the deployed backend URL.
+2. Add a Vercel environment variable named `API_BASE` and set it to your deployed backend URL, for example:
+   ```text
+   https://your-backend.onrender.com
+   ```
+3. Set the Vercel build command to:
+   ```bash
+   npm run build
+   ```
+4. The build step generates `js/config.js` automatically with the correct backend URL.
+5. If you need local development, `js/config.js` still defaults to `http://localhost:5000`.
 
 ### Backend (Render)
 
