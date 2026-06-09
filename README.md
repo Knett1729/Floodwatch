@@ -13,8 +13,12 @@
    ```bash
    npm run build
    ```
-4. The build step generates `js/config.js` automatically with the correct backend URL.
-5. If you need local development, `js/config.js` still defaults to `http://localhost:5000`.
+4. Set the Vercel output directory to:
+   ```text
+   public
+   ```
+5. The build step generates `public/js/config.js` with the correct backend URL.
+6. For local development, `js/config.js` still defaults to `http://localhost:5000` if you run the app without Vercel build.
 
 ### Backend (Render)
 
