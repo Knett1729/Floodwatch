@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: floodwatch-backend
+    env: python
+    region: oregon
+    plan: free
+    branch: main
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: python backend/app.py
+    autoDeploy: true

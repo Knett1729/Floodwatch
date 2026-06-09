@@ -1,0 +1,20 @@
+{
+  "sequence_length": 6,
+  "num_features": 2,
+  "num_classes": 3,
+  "feature_names": [
+    "rainfall_mm_hr",
+    "water_level_m"
+  ],
+  "class_names": [
+    "Normal",
+    "Warning",
+    "Critical"
+  ],
+  "thresholds": {
+    "Normal": "water < ~1.2m, rain < ~25mm/hr",
+    "Warning": "water 1.2-2.0m or rain 25-60mm/hr with rising trend",
+    "Critical": "water > 2.0m and/or rain > 60mm/hr sustained"
+  },
+  "note": "Replace synthetic data with real PAGASA CSV for final thesis"
+}

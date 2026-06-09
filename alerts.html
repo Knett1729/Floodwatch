@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Alerts — FloodWatch Talisay</title>
+  <link rel="stylesheet" href="css/style.css"/>
+  <style>
+    .alert-table{width:100%;border-collapse:collapse;font-size:13px}
+    .alert-table th{text-align:left;padding:8px 12px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;color:var(--color-text-secondary);border-bottom:1px solid var(--color-border-tertiary)}
+    .alert-table td{padding:10px 12px;border-bottom:0.5px solid var(--color-border-tertiary)}
+    .alert-table tr:hover td{background:var(--color-background-secondary)}
+    .risk-mini{height:6px;border-radius:3px;display:inline-block;vertical-align:middle}
+    .sort-btn{background:none;border:none;cursor:pointer;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;color:var(--color-text-secondary);padding:0;display:flex;align-items:center;gap:4px}
+    .sort-btn:hover{color:var(--color-text-primary)}
+    .filter-strip{display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap}
+    .filter-chip{padding:5px 12px;border-radius:20px;border:1px solid var(--color-border-secondary);background:var(--color-background-primary);font-size:12px;cursor:pointer;transition:all 0.15s}
+    .filter-chip.active-all{background:#1a1a2e;color:white;border-color:#1a1a2e}
+    .filter-chip.active-normal{background:#1D9E75;color:white;border-color:#1D9E75}
+    .filter-chip.active-warning{background:#e6a817;color:white;border-color:#e6a817}
+    .filter-chip.active-critical{background:#d63031;color:white;border-color:#d63031}
+    .summary-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.5rem}
+    .sum-cell{background:white;border-radius:10px;padding:1rem;text-align:center;border:1px solid #eee}
+    .sum-val{font-size:28px;font-weight:700}
+    .sum-lbl{font-size:12px;color:#888;margin-top:3px}
+    .refresh-btn{margin-left:auto;padding:6px 14px;border-radius:8px;border:1px solid var(--color-border-secondary);background:var(--color-background-primary);font-size:12px;cursor:pointer;display:flex;align-items:center;gap:6px}
+    .refresh-btn:hover{background:var(--color-background-secondary)}
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-brand"><span class="nav-pulse"></span>FloodWatch <span class="nav-city">Talisay</span></div>
+    <div class="nav-links">
+      <a href="index.html" class="nav-link">Home</a>
+      <a href="map.html" class="nav-link">Live Map</a>
+      <a href="predict.html" class="nav-link">Predict</a>
+      <a href="alerts.html" class="nav-link active">Alerts</a>
+      <a href="history.html" class="nav-link">Historical</a>
+      <a href="about.html" class="nav-link">About</a>
+    </div>
+    <div class="nav-time" id="clock"></div>
+  </nav>
+
+  <main class="container">
+    <div class="page-header">
+      <h1>Live barangay alerts</h1>
+      <p>Real-time flood risk status for all 22 barangays of Talisay City. Data refreshes every 15 minutes from Open-Meteo.</p>
+    </div>
+
+    <!-- Summary strip -->
+    <div class="summary-strip">
+      <div class="sum-cell"><div class="sum-val" id="s-total">22</div><div class="sum-lbl">Total barangays</div></div>
+      <div class="sum-cell"><div class="sum-val" style="color:#1D9E75" id="s-normal">—</div><div class="sum-lbl">Normal</div></div>
+      <div class="sum-cell"><div class="sum-val" style="color:#e6a817" id="s-warning">—</div><div class="sum-lbl">Warning</div></div>
+      <div class="sum-cell"><div class="sum-val" style="color:#d63031" id="s-critical">—</div><div class="sum-lbl">Critical</div></div>
+    </div>
+
+    <div class="card">
+      <!-- Filter + refresh -->
+      <div style="display:flex;align-items:center;margin-bottom:1rem;gap:8px;flex-wrap:wrap">
+        <div class="filter-strip" style="margin-bottom:0">
+          <button class="filter-chip active-all" onclick="setFilter('all',this)">All</button>
+          <button class="filter-chip" onclick="setFilter('normal',this)">Normal</button>
+          <button class="filter-chip" onclick="setFilter('warning',this)">Warning</button>
+          <button class="filter-chip" onclick="setFilter('critical',this)">Critical</button>
+        </div>
+        <input id="search-box" type="text" placeholder="Search barangay…" oninput="renderTable()" style="padding:6px 10px;border-radius:8px;border:1px solid var(--color-border-secondary);font-size:13px;background:var(--color-background-primary);color:var(--color-text-primary);width:180px"/>
+        <button class="refresh-btn" onclick="FloodWatch.refreshNow()">↻ Refresh now</button>
+        <span id="last-updated" style="font-size:12px;color:var(--color-text-secondary)"></span>
+      </div>
+
+      <!-- Table -->
+      <table class="alert-table">
+        <thead>
+          <tr>
+            <th><button class="sort-btn" onclick="setSort('name')">Barangay ↕</button></th>
+            <th>Status</th>
+            <th><button class="sort-btn" onclick="setSort('rain')">Rain (mm/hr) ↕</button></th>
+            <th><button class="sort-btn" onclick="setSort('water')">Water (m) ↕</button></th>
+            <th><button class="sort-btn" onclick="setSort('risk')">Risk score ↕</button></th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="alert-tbody"></tbody>
+      </table>
+    </div>
+  </main>
+
+  <script src="js/config.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/liveData.js"></script>
+  <script>
+    let allData = [], filterStatus = 'all', sortKey = 'risk', sortDir = -1;
+
+    FloodWatch.onDataUpdate((barangays, meta) => {
+      allData = barangays;
+      const counts = {normal:0,warning:0,critical:0};
+      barangays.forEach(b => counts[b.status]++);
+      document.getElementById('s-normal').textContent   = counts.normal;
+      document.getElementById('s-warning').textContent  = counts.warning;
+      document.getElementById('s-critical').textContent = counts.critical;
+      if (meta.lastFetch) {
+        document.getElementById('last-updated').textContent =
+          'Updated ' + new Date(meta.lastFetch).toLocaleTimeString('en-PH',{hour:'2-digit',minute:'2-digit'});
+      }
+      renderTable();
+    });
+
+    function setFilter(f, btn) {
+      filterStatus = f;
+      document.querySelectorAll('.filter-chip').forEach(b => b.className='filter-chip');
+      btn.classList.add('active-'+f);
+      renderTable();
+    }
+
+    function setSort(key) {
+      if (sortKey === key) sortDir *= -1; else { sortKey = key; sortDir = -1; }
+      renderTable();
+    }
+
+    function renderTable() {
+      const q    = (document.getElementById('search-box').value||'').toLowerCase();
+      let rows   = allData.filter(b =>
+        (filterStatus==='all' || b.status===filterStatus) &&
+        b.name.toLowerCase().includes(q)
+      );
+      rows.sort((a,b) => {
+        const av = sortKey==='name' ? a.name : (a[sortKey]||0);
+        const bv = sortKey==='name' ? b.name : (b[sortKey]||0);
+        return (av>bv?1:av<bv?-1:0)*sortDir;
+      });
+
+      const statusColors = {normal:'#1D9E75',warning:'#e6a817',critical:'#d63031'};
+      const actions = {normal:'Monitor',warning:'Prepare evacuation',critical:'Evacuate immediately'};
+      const tbody = document.getElementById('alert-tbody');
+      tbody.innerHTML = '';
+      rows.forEach(b => {
+        const tr = document.createElement('tr');
+        const risk = b.risk||0;
+        const col  = statusColors[b.status]||'#ccc';
+        tr.innerHTML = `
+          <td style="font-weight:500">${b.name}</td>
+          <td><span class="status-badge badge-${b.status}">${cap(b.status)}</span></td>
+          <td>${b.rain}</td>
+          <td>${b.water}</td>
+          <td>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-weight:500;width:36px">${risk}%</span>
+              <div style="flex:1;background:#eee;border-radius:3px;height:6px;min-width:60px">
+                <div style="width:${risk}%;height:6px;border-radius:3px;background:${col}"></div>
+              </div>
+            </div>
+          </td>
+          <td style="font-size:12px;color:${col};font-weight:500">${actions[b.status]||'—'}</td>`;
+        tbody.appendChild(tr);
+      });
+
+      if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--color-text-secondary);padding:2rem">No barangays match the current filter.</td></tr>';
+      }
+    }
+
+    function cap(s){return s.charAt(0).toUpperCase()+s.slice(1);}
+    startClock();
+  </script>
+</body>
+</html>

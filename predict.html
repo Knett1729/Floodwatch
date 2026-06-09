@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Predict — FloodWatch Talisay</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <link rel="stylesheet" href="css/style.css"/>
+  <style>
+    .autofill-banner{display:none;background:#E8F4FD;border:1px solid #85B7EB;border-radius:8px;padding:10px 14px;font-size:13px;color:#0C447C;margin-bottom:12px;align-items:center;gap:8px}
+    .autofill-banner.show{display:flex}
+    .live-dot{width:8px;height:8px;border-radius:50%;background:#1D9E75;animation:pulse 2s infinite;flex-shrink:0}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+    .seq-preview{display:none;background:var(--color-background-secondary);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:12px}
+    .seq-preview.show{display:block}
+    .seq-title{font-size:11px;color:var(--color-text-secondary);margin-bottom:6px;font-weight:500;text-transform:uppercase;letter-spacing:0.4px}
+    .seq-bars{display:flex;align-items:flex-end;gap:4px;height:40px}
+    .seq-bar{flex:1;border-radius:3px 3px 0 0;min-height:3px;transition:height 0.3s}
+    .seq-labels{display:flex;gap:4px;margin-top:4px}
+    .seq-lbl{flex:1;text-align:center;font-size:10px;color:var(--color-text-secondary)}
+    .confidence-ring{display:flex;align-items:center;justify-content:center;gap:16px;margin:12px 0}
+    .ring-wrap{text-align:center}
+    .ring-val{font-size:22px;font-weight:500}
+    .ring-lbl{font-size:11px;color:var(--color-text-secondary);margin-top:2px}
+    .weather-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+    .w-cell{background:var(--color-background-secondary);border-radius:8px;padding:8px;text-align:center}
+    .w-val{font-size:15px;font-weight:500}
+    .w-lbl{font-size:10px;color:var(--color-text-secondary);margin-top:2px}
+    .tab-row{display:flex;gap:4px;margin-bottom:1rem;border-bottom:1px solid var(--color-border-tertiary);padding-bottom:0}
+    .tab-btn{padding:8px 16px;border:none;background:none;font-size:13px;cursor:pointer;color:var(--color-text-secondary);border-bottom:2px solid transparent;margin-bottom:-1px}
+    .tab-btn.active{color:var(--color-text-primary);border-bottom-color:#1D9E75;font-weight:500}
+    .tab-pane{display:none}.tab-pane.active{display:block}
+    .brgy-quick-list{display:grid;grid-template-columns:1fr 1fr;gap:6px;max-height:220px;overflow-y:auto}
+    .brgy-quick-btn{padding:7px 10px;border-radius:7px;border:1px solid var(--color-border-tertiary);background:var(--color-background-primary);font-size:12px;cursor:pointer;text-align:left;transition:all 0.15s;display:flex;justify-content:space-between;align-items:center}
+    .brgy-quick-btn:hover{border-color:#1D9E75;color:#1D9E75}
+    .brgy-quick-btn .bq-status{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-brand"><span class="nav-pulse"></span>FloodWatch <span class="nav-city">Talisay</span></div>
+    <div class="nav-links">
+      <a href="index.html" class="nav-link">Home</a>
+      <a href="map.html" class="nav-link">Live Map</a>
+      <a href="predict.html" class="nav-link active">Predict</a>
+      <a href="alerts.html" class="nav-link">Alerts</a>
+      <a href="history.html" class="nav-link">Historical</a>
+      <a href="about.html" class="nav-link">About</a>
+    </div>
+    <div class="nav-time" id="clock"></div>
+  </nav>
+
+  <main class="container">
+    <div class="page-header">
+      <h1>Flood Prediction</h1>
+      <p>Select a barangay to auto-fill live readings, or enter values manually. The model forecasts flood risk 3–6 hours ahead.</p>
+    </div>
+
+    <div class="predict-grid">
+      <!-- INPUT FORM -->
+      <div class="card">
+        <h2 class="card-title">Input parameters</h2>
+
+        <!-- Backend status -->
+        <div id="backend-status"></div>
+
+        <!-- Tabs: Quick select or Manual -->
+        <div class="tab-row">
+          <button class="tab-btn active" onclick="switchTab('quick',this)">Quick select</button>
+          <button class="tab-btn" onclick="switchTab('manual',this)">Manual entry</button>
+        </div>
+
+        <!-- Quick select tab -->
+        <div class="tab-pane active" id="tab-quick">
+          <div class="form-group" style="margin-bottom:10px">
+            <label>Select barangay</label>
+            <select id="sel-brgy" onchange="onBrgyChange(this.value)">
+              <option value="">-- Choose a barangay --</option>
+            </select>
+          </div>
+          <div class="brgy-quick-list" id="brgy-quick-list"></div>
+        </div>
+
+        <!-- Manual tab -->
+        <div class="tab-pane" id="tab-manual">
+          <div class="form-group">
+            <label>Select barangay</label>
+            <select id="sel-brgy-manual" onchange="onBrgyChange(this.value)">
+              <option value="">-- Choose a barangay --</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Auto-fill banner -->
+        <div class="autofill-banner" id="autofill-banner">
+          <div class="live-dot"></div>
+          <span id="autofill-msg">Live readings loaded from Open-Meteo</span>
+        </div>
+
+        <!-- Live weather strip -->
+        <div class="weather-strip" id="weather-strip" style="display:none">
+          <div class="w-cell"><div class="w-val" id="ws-rain">—</div><div class="w-lbl">Rain mm/hr</div></div>
+          <div class="w-cell"><div class="w-val" id="ws-water">—</div><div class="w-lbl">Water level m</div></div>
+          <div class="w-cell"><div class="w-val" id="ws-risk">—</div><div class="w-lbl">Risk score</div></div>
+          <div class="w-cell"><div class="w-val" id="ws-status">—</div><div class="w-lbl">Current status</div></div>
+        </div>
+
+        <!-- Inputs -->
+        <div class="form-row">
+          <div class="form-group">
+            <label>Rainfall (mm/hr)</label>
+            <input type="number" id="inp-rain" placeholder="e.g. 35" min="0" max="300" step="0.1" oninput="updateSeqPreview()"/>
+            <span class="input-hint">Current hourly reading</span>
+          </div>
+          <div class="form-group">
+            <label>Water level (meters)</label>
+            <input type="number" id="inp-water" placeholder="e.g. 1.8" min="0" max="10" step="0.1"/>
+            <span class="input-hint">Estimated from 6hr rainfall</span>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Soil saturation</label>
+            <select id="inp-soil">
+              <option value="dry">Dry — recent sunny days</option>
+              <option value="moist" selected>Moist — light recent rain</option>
+              <option value="saturated">Saturated — heavy recent rain</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Forecast window</label>
+            <select id="inp-window">
+              <option value="3">3 hours ahead</option>
+              <option value="6">6 hours ahead</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Rainfall trend (last 3 hours)</label>
+          <select id="inp-trend" onchange="updateSeqPreview()">
+            <option value="decreasing">Decreasing</option>
+            <option value="steady">Steady</option>
+            <option value="increasing" selected>Increasing</option>
+            <option value="rapid">Rapidly increasing</option>
+          </select>
+        </div>
+
+        <!-- 6-hour sequence preview -->
+        <div class="seq-preview" id="seq-preview">
+          <div class="seq-title">6-hour rainfall sequence fed to model</div>
+          <div class="seq-bars" id="seq-bars"></div>
+          <div class="seq-labels" id="seq-labels"></div>
+        </div>
+
+        <button class="btn-primary full-width" onclick="runPrediction()">Run prediction</button>
+      </div>
+
+      <!-- RESULT PANEL -->
+      <div>
+        <div class="card result-placeholder" id="result-placeholder">
+          <div class="placeholder-icon">&#9874;</div>
+          <p>Select a barangay and click <strong>Run prediction</strong> to see the flood risk forecast.</p>
+        </div>
+
+        <div class="card result-card" id="result-card" style="display:none">
+          <div class="result-header" id="result-header">
+            <div class="result-level" id="result-level"></div>
+            <div class="result-brgy" id="result-brgy"></div>
+          </div>
+          <div class="result-body">
+            <p id="result-desc"></p>
+            <div class="result-metrics">
+              <div class="r-metric"><div class="r-val" id="r-rain"></div><div class="r-lbl">Rainfall</div></div>
+              <div class="r-metric"><div class="r-val" id="r-water"></div><div class="r-lbl">Water level</div></div>
+              <div class="r-metric"><div class="r-val" id="r-risk"></div><div class="r-lbl">Risk score</div></div>
+              <div class="r-metric"><div class="r-val" id="r-window"></div><div class="r-lbl">Forecast</div></div>
+            </div>
+            <div class="risk-bar-wrap">
+              <div class="risk-bar-label"><span>Risk level</span><span id="risk-pct"></span></div>
+              <div class="risk-bar-track"><div class="risk-bar-fill" id="risk-bar"></div></div>
+            </div>
+            <!-- Probability breakdown -->
+            <div id="prob-row" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:1rem;display:none">
+              <div style="text-align:center;background:#E1F5EE;border-radius:8px;padding:10px">
+                <div style="font-size:18px;font-weight:500;color:#085041" id="pb-normal">—</div>
+                <div style="font-size:11px;color:#0F6E56">Normal</div>
+              </div>
+              <div style="text-align:center;background:#FAEEDA;border-radius:8px;padding:10px">
+                <div style="font-size:18px;font-weight:500;color:#412402" id="pb-warning">—</div>
+                <div style="font-size:11px;color:#854F0B">Warning</div>
+              </div>
+              <div style="text-align:center;background:#FCEBEB;border-radius:8px;padding:10px">
+                <div style="font-size:18px;font-weight:500;color:#501313" id="pb-critical">—</div>
+                <div style="font-size:11px;color:#A32D2D">Critical</div>
+              </div>
+            </div>
+            <div class="action-box" id="action-box">
+              <strong>Recommended action</strong>
+              <p id="action-text"></p>
+            </div>
+            <!-- Sequence used -->
+            <div id="seq-used" style="display:none;margin-top:10px">
+              <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:4px;font-weight:500;text-transform:uppercase;letter-spacing:0.4px">6-hour sequence used</div>
+              <div id="seq-used-content" style="font-size:12px;color:var(--color-text-secondary);background:var(--color-background-secondary);padding:8px 10px;border-radius:6px;font-family:monospace"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Alert level guide -->
+        <div class="card" style="margin-top:1rem">
+          <h2 class="card-title">Alert level guide</h2>
+          <div class="guide-list">
+            <div class="guide-item normal-guide">
+              <div class="guide-badge normal-badge">Normal</div>
+              <div><div class="guide-title">Rain &lt;25 mm/hr · Water &lt;1.2m</div><div class="guide-sub">Monitor only. No action needed.</div></div>
+            </div>
+            <div class="guide-item warning-guide">
+              <div class="guide-badge warning-badge">Warning</div>
+              <div><div class="guide-title">Rain 25–60 mm/hr · Water 1.2–2.0m</div><div class="guide-sub">Prepare evacuation. Alert low-lying residents.</div></div>
+            </div>
+            <div class="guide-item critical-guide">
+              <div class="guide-badge critical-badge">Critical</div>
+              <div><div class="guide-title">Rain &gt;60 mm/hr · Water &gt;2.0m</div><div class="guide-sub">Evacuate immediately. Activate CDRRMO.</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="js/config.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/liveData.js"></script>
+  <script src="js/predict.js"></script>
+</body>
+</html>

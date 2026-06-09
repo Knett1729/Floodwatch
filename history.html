@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Historical — FloodWatch Talisay</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+
+  <nav class="navbar">
+    <div class="nav-brand">
+      <span class="nav-pulse"></span>
+      FloodWatch <span class="nav-city">Talisay</span>
+    </div>
+    <div class="nav-links">
+      <a href="index.html" class="nav-link">Home</a>
+      <a href="map.html" class="nav-link">Live Map</a>
+      <a href="predict.html" class="nav-link">Predict</a>
+      <a href="alerts.html" class="nav-link">Alerts</a>
+      <a href="history.html" class="nav-link active">Historical</a>
+      <a href="about.html" class="nav-link">About</a>
+    </div>
+    <div class="nav-time" id="clock"></div>
+  </nav>
+
+  <main class="container">
+
+    <div class="page-header">
+      <h1>Historical flood data</h1>
+      <p>Flood event records for Talisay City from 2015–2024 sourced from NDRRMC reports and PAGASA rainfall archives.</p>
+    </div>
+
+    <!-- SUMMARY STATS -->
+    <div class="stats-row">
+      <div class="stat-box">
+        <div class="stat-big">42</div>
+        <div class="stat-lbl">Total flood events</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-big">9</div>
+        <div class="stat-lbl">Peak year (2021)</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-big">18</div>
+        <div class="stat-lbl">Barangays most affected</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-big">4.2</div>
+        <div class="stat-lbl">Avg events per year</div>
+      </div>
+    </div>
+
+    <!-- CHARTS ROW -->
+    <div class="charts-grid">
+      <div class="card">
+        <h2 class="card-title">Flood events per year (2015–2024)</h2>
+        <canvas id="barChart" height="200"></canvas>
+      </div>
+      <div class="card">
+        <h2 class="card-title">Monthly flood frequency</h2>
+        <canvas id="monthChart" height="200"></canvas>
+      </div>
+    </div>
+
+    <!-- RAINFALL vs FLOOD LINE CHART -->
+    <div class="card">
+      <h2 class="card-title">Rainfall vs flood events — 2024</h2>
+      <canvas id="lineChart" height="120"></canvas>
+    </div>
+
+    <!-- MAJOR EVENTS TIMELINE -->
+    <div class="card">
+      <h2 class="card-title">Major flood events</h2>
+      <div class="timeline" id="timeline"></div>
+    </div>
+
+    <!-- MOST AFFECTED BARANGAYS -->
+    <div class="card">
+      <h2 class="card-title">Most frequently flooded barangays</h2>
+      <div class="barlist" id="brgy-bars"></div>
+    </div>
+
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/liveData.js"></script>
+  <script src="js/history.js"></script>
+</body>
+</html>

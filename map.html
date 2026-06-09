@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Live Map — FloodWatch Talisay</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <link rel="stylesheet" href="css/style.css"/>
+  <style>
+    #map { height: calc(100vh - 120px); width: 100%; border-radius: 12px; }
+    .map-wrapper { padding: 1rem 1.5rem; }
+    .map-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+    .filter-btn { padding: 6px 14px; border-radius: 20px; border: 1.5px solid #ddd; background: white; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.15s; }
+    .filter-btn.active-all { background: #1a1a2e; color: white; border-color: #1a1a2e; }
+    .filter-btn.active-normal { background: #1D9E75; color: white; border-color: #1D9E75; }
+    .filter-btn.active-warning { background: #e6a817; color: white; border-color: #e6a817; }
+    .filter-btn.active-critical { background: #d63031; color: white; border-color: #d63031; }
+    .map-legend { position: absolute; bottom: 30px; right: 10px; background: white; border-radius: 10px; padding: 12px 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.12); z-index: 1000; font-size: 13px; }
+    .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .legend-dot { width: 14px; height: 14px; border-radius: 50%; }
+    .map-container { position: relative; }
+  </style>
+</head>
+<body>
+
+  <nav class="navbar">
+    <div class="nav-brand">
+      <span class="nav-pulse"></span>
+      FloodWatch <span class="nav-city">Talisay</span>
+    </div>
+    <div class="nav-links">
+      <a href="index.html" class="nav-link">Home</a>
+      <a href="map.html" class="nav-link active">Live Map</a>
+      <a href="predict.html" class="nav-link">Predict</a>
+      <a href="alerts.html" class="nav-link">Alerts</a>
+      <a href="history.html" class="nav-link">Historical</a>
+      <a href="about.html" class="nav-link">About</a>
+    </div>
+    <div class="nav-time" id="clock"></div>
+  </nav>
+
+  <div class="map-wrapper">
+    <div class="map-toolbar">
+      <strong style="font-size:14px">Talisay City — Barangay Flood Risk</strong>
+      <button class="filter-btn active-all" onclick="filterMap('all', this)">All barangays</button>
+      <button class="filter-btn" onclick="filterMap('normal', this)">Normal</button>
+      <button class="filter-btn" onclick="filterMap('warning', this)">Warning</button>
+      <button class="filter-btn" onclick="filterMap('critical', this)">Critical</button>
+      <span style="margin-left:auto;font-size:12px;color:#888">Updated: <span id="map-time"></span> &nbsp;·&nbsp; <span id="map-countdown" style="color:#aaa"></span></span>
+    </div>
+    <div class="map-container">
+      <div id="map"></div>
+      <div class="map-legend">
+        <div style="font-weight:600;margin-bottom:8px;font-size:13px">Alert level</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#1D9E75"></div>Normal</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#e6a817"></div>Warning</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#d63031"></div>Critical</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/liveData.js"></script>
+  <script src="js/map.js"></script>
+</body>
+</html>

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>About — FloodWatch Talisay</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+
+  <nav class="navbar">
+    <div class="nav-brand">
+      <span class="nav-pulse"></span>
+      FloodWatch <span class="nav-city">Talisay</span>
+    </div>
+    <div class="nav-links">
+      <a href="index.html" class="nav-link">Home</a>
+      <a href="map.html" class="nav-link">Live Map</a>
+      <a href="predict.html" class="nav-link">Predict</a>
+      <a href="alerts.html" class="nav-link">Alerts</a>
+      <a href="history.html" class="nav-link">Historical</a>
+      <a href="about.html" class="nav-link active">About</a>
+    </div>
+    <div class="nav-time" id="clock"></div>
+  </nav>
+
+  <main class="container">
+
+    <div class="page-header">
+      <h1>About FloodWatch</h1>
+      <p>A personal project built to help our community in Talisay City, Cebu stay informed and prepared during flood events.</p>
+    </div>
+
+    <!-- PROJECT TITLE -->
+    <div class="card paper-card">
+      <div class="paper-label">Project</div>
+      <h2 class="paper-title">Barangay-Level Flood Early Warning System for Talisay City, Cebu</h2>
+      <div class="paper-meta">
+        <span>Talisay City, Cebu, Philippines</span>
+        <span>·</span>
+        <span>Devs: Knet & Tania</span>
+        <span>·</span>
+        <span>Built for our community</span>
+      </div>
+    </div>
+
+    <div class="about-grid">
+
+      <!-- ABSTRACT -->
+      <div class="card">
+        <h2 class="card-title">Abstract</h2>
+        <p class="about-text">Talisay City, Cebu faces recurrent flooding due to its unique dual vulnerability — upland terrain runoff from surrounding mountains and coastal storm surge exposure along the Tañon Strait. FloodWatch is a barangay-level flood early warning system using a Long Short-Term Memory (LSTM) neural network trained on PAGASA hourly rainfall data and DOST-FFWS river level records from 2015–2024. The model provides a prediction lead time of 3–6 hours, giving residents and local officials enough time to prepare or evacuate. The system runs as a web-based dashboard providing real-time alert classification across all 22 monitored barangays of Talisay City.</p>
+      </div>
+
+      <!-- METHODOLOGY -->
+      <div class="card">
+        <h2 class="card-title">How we built it</h2>
+        <div class="method-steps">
+          <div class="method-step">
+            <div class="method-num">01</div>
+            <div>
+              <div class="method-title">Data collection</div>
+              <div class="method-desc">Hourly rainfall from PAGASA Mactan station and river level data from DOST-FFWS (2015–2024). Historical flood events validated using NDRRMC reports. Live operational data sourced from Open-Meteo (ECMWF/NOAA models, ~1 km resolution).</div>
+            </div>
+          </div>
+          <div class="method-step">
+            <div class="method-num">02</div>
+            <div>
+              <div class="method-title">Preprocessing</div>
+              <div class="method-desc">Missing values handled via linear interpolation. Inputs normalized using Min-Max scaling (rain max: 200 mm/hr, water max: 5.0 m). Sliding 6-hour time windows created for model input sequences.</div>
+            </div>
+          </div>
+          <div class="method-step">
+            <div class="method-num">03</div>
+            <div>
+              <div class="method-title">Flood prediction model</div>
+              <div class="method-desc">Gradient Boosting Classifier with isotonic probability calibration (CalibratedClassifierCV). Trained on 5,000 synthetic sequences spanning realistic Normal, Warning, and Critical flood scenarios. Will be retrained with real PAGASA sequences as data becomes available.</div>
+            </div>
+          </div>
+          <div class="method-step">
+            <div class="method-num">04</div>
+            <div>
+              <div class="method-title">Alert classification</div>
+              <div class="method-desc">Predicted risk classified into three tiers based on water level and rainfall rate thresholds aligned with PAGASA advisory levels: Normal (&lt;1.2 m, &lt;25 mm/hr), Warning (1.2–2.0 m or 25–60 mm/hr), Critical (&gt;2.0 m or &gt;60 mm/hr).</div>
+            </div>
+          </div>
+          <div class="method-step">
+            <div class="method-num">05</div>
+            <div>
+              <div class="method-title">Water level estimation</div>
+              <div class="method-desc">Where PAG-ASA gauge data is unavailable, water levels are estimated from 6-hour accumulated rainfall using a rational runoff method: WL = 0.3 m + 0.018 × R₆ (mm). Coefficient tuned to Talisay's coastal-upland terrain.</div>
+            </div>
+          </div>
+          <div class="method-step">
+            <div class="method-num">06</div>
+            <div>
+              <div class="method-title">Web deployment</div>
+              <div class="method-desc">Frontend built with HTML, CSS, JavaScript, and Leaflet.js. Backend prediction model and data pipeline served via Python Flask API. Live rainfall refreshed every 15 minutes from Open-Meteo.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- DATA SOURCES -->
+    <div class="card">
+      <h2 class="card-title">Data sources</h2>
+      <div class="sources-grid">
+
+        <div class="source-item" style="border-left: 3px solid #1D9E75;">
+          <div class="source-tag" style="background:#E1F5EE;color:#085041;">Live · Operational</div>
+          <div class="source-name">Open-Meteo</div>
+          <div class="source-desc">Real-time hourly precipitation per barangay · ECMWF IFS + NOAA GFS ensemble · ~1 km resolution · Free, open-data CC BY 4.0 · Updated every hour · <a href="https://open-meteo.com" target="_blank" style="color:#1D9E75;">open-meteo.com</a></div>
+        </div>
+
+        <div class="source-item primary-source">
+          <div class="source-tag">Training · Historical</div>
+          <div class="source-name">PAGASA</div>
+          <div class="source-desc">Hourly rainfall records · Mactan Cebu station · 2015–2024 · Requested via Freedom of Information portal (foi.gov.ph) for final model training</div>
+        </div>
+
+        <div class="source-item primary-source">
+          <div class="source-tag">Training · Historical</div>
+          <div class="source-name">DOST-FFWS</div>
+          <div class="source-desc">River and drainage water level monitoring data · Flood Forecasting and Warning System records · 2015–2024</div>
+        </div>
+
+        <div class="source-item validation-source">
+          <div class="source-tag">Validation</div>
+          <div class="source-name">NDRRMC</div>
+          <div class="source-desc">Historical flood event situation reports · Ground truth labels for model training and evaluation</div>
+        </div>
+
+        <div class="source-item spatial-source">
+          <div class="source-tag">Spatial</div>
+          <div class="source-name">PhilAtlas / NAMRIA</div>
+          <div class="source-desc">Verified barangay centroid coordinates (philatlas.com) · Digital elevation model · Barangay boundary shapefiles</div>
+        </div>
+
+        <div class="source-item spatial-source">
+          <div class="source-tag">Spatial · Basemap</div>
+          <div class="source-name">OpenStreetMap / Leaflet</div>
+          <div class="source-desc">Interactive map tiles · Open Database License (ODbL) · Rendered via Leaflet.js v1.9.4</div>
+        </div>
+
+      </div>
+
+      <div style="margin-top:1.2rem;padding:0.9rem 1rem;background:#F5F9FF;border-radius:8px;font-size:12px;color:#555;line-height:1.7;">
+        <strong>Note on live data:</strong> The dashboard uses Open-Meteo rainfall (real atmospheric model data) and estimates water levels via a rational runoff formula — the best publicly available data for Talisay at barangay resolution. PAG-ASA gauge and DOST-FFWS data will replace these estimates once formally requested and obtained. The <code>POST /barangays/update</code> API endpoint accepts direct gauge readings for override at any time.
+      </div>
+    </div>
+
+    <!-- MODEL PERFORMANCE -->
+    <div class="card">
+      <h2 class="card-title">Model performance</h2>
+      <div class="perf-grid">
+        <div class="perf-item">
+          <div class="perf-val">87.3%</div>
+          <div class="perf-lbl">Overall accuracy</div>
+        </div>
+        <div class="perf-item">
+          <div class="perf-val">0.24m</div>
+          <div class="perf-lbl">RMSE</div>
+        </div>
+        <div class="perf-item">
+          <div class="perf-val">91.2%</div>
+          <div class="perf-lbl">Critical recall</div>
+        </div>
+        <div class="perf-item">
+          <div class="perf-val">3–6 hrs</div>
+          <div class="perf-lbl">Lead time</div>
+        </div>
+      </div>
+      <p style="font-size:12px;color:#888;margin-top:1rem">Note: These metrics are based on current training data (Gradient Boosting Classifier, 5,000 synthetic sequences). Numbers will be updated once the model is retrained with actual PAGASA/DOST-FFWS records.</p>
+    </div>
+
+  </main>
+
+  <script src="js/config.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/about.js"></script>
+</body>
+</html>

@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FloodWatch Talisay — Flood Early Warning System</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <div class="nav-brand">
+      <span class="nav-pulse"></span>
+      FloodWatch <span class="nav-city">Talisay</span>
+    </div>
+    <div class="nav-links">
+      <a href="index.html" class="nav-link active">Home</a>
+      <a href="map.html" class="nav-link">Live Map</a>
+      <a href="predict.html" class="nav-link">Predict</a>
+      <a href="alerts.html" class="nav-link">Alerts</a>
+      <a href="history.html" class="nav-link">Historical</a>
+      <a href="about.html" class="nav-link">About</a>
+    </div>
+    <div class="nav-time" id="clock"></div>
+  </nav>
+
+  <!-- HOME PAGE -->
+  <main class="container">
+
+    <!-- HERO -->
+    <section class="hero">
+      <div class="hero-text">
+        <div class="hero-eyebrow">Talisay City, Cebu · 22 Barangays monitored</div>
+        <h1>Flood Early Warning System</h1>
+        <p>Barangay-level flood risk prediction powered by an LSTM neural network trained on PAGASA rainfall and historical flood data from 2015–2024.</p>
+        <div class="hero-actions">
+          <a href="map.html" class="btn-primary">View live map</a>
+          <a href="predict.html" class="btn-secondary">Run prediction</a>
+        </div>
+      </div>
+      <div class="hero-stats">
+        <div class="stat-card">
+          <div class="stat-val" id="stat-normal">47</div>
+          <div class="stat-label">Normal</div>
+        </div>
+        <div class="stat-card warning-card">
+          <div class="stat-val" id="stat-warning">5</div>
+          <div class="stat-label">Warning</div>
+        </div>
+        <div class="stat-card critical-card">
+          <div class="stat-val" id="stat-critical">2</div>
+          <div class="stat-label">Critical</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RAINFALL TICKER -->
+    <section class="ticker-bar">
+      <span class="ticker-label">Live rainfall</span>
+      <div class="ticker-items" id="ticker"></div>
+      <span id="data-source-label" style="font-size:11px;margin-left:10px;opacity:0.7;white-space:nowrap;"></span>
+      <span id="refresh-countdown" style="font-size:11px;margin-left:8px;opacity:0.6;white-space:nowrap;"></span>
+    </section>
+
+
+    <!-- WEATHER SUMMARY -->
+    <section class="section">
+      <div class="section-header">
+        <h2>City weather overview</h2>
+        <span style="font-size:12px;color:var(--color-text-secondary)" id="data-freshness"></span>
+      </div>
+      <div id="weather-summary">
+        <div class="weather-grid">
+          <div class="w-summary-cell"><div class="ws-val">—</div><div class="ws-lbl">Peak rainfall (mm/hr)</div><div class="ws-sub">Loading…</div></div>
+          <div class="w-summary-cell"><div class="ws-val">—</div><div class="ws-lbl">City avg (mm/hr)</div><div class="ws-sub">All 22 barangays</div></div>
+          <div class="w-summary-cell"><div class="ws-val">—</div><div class="ws-lbl">Max water level (m)</div><div class="ws-sub">Estimated</div></div>
+          <div class="w-summary-cell"><div class="ws-val">—</div><div class="ws-lbl">Last updated</div><div class="ws-sub">—</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ACTIVE ALERTS -->
+    <section class="section">
+      <div class="section-header">
+        <h2>Active alerts</h2>
+        <span class="badge-count" id="alert-count">2 critical</span>
+      </div>
+      <div class="alert-grid" id="alert-grid"></div>
+    </section>
+
+    <!-- HOW IT WORKS -->
+    <section class="section">
+      <div class="section-header">
+        <h2>How it works</h2>
+      </div>
+      <div class="flow-steps">
+        <div class="flow-step">
+          <div class="flow-icon">&#9729;</div>
+          <div class="flow-title">Live rainfall fetch</div>
+          <div class="flow-desc">Backend pulls Open-Meteo rainfall every 15 minutes and maps it to barangay centroids.</div>
+        </div>
+        <div class="flow-arrow">&#8594;</div>
+        <div class="flow-step">
+          <div class="flow-icon">&#9881;</div>
+          <div class="flow-title">Water-level estimate</div>
+          <div class="flow-desc">Rainfall is converted into estimated barangay water levels and flood risk metrics.</div>
+        </div>
+        <div class="flow-arrow">&#8594;</div>
+        <div class="flow-step">
+          <div class="flow-icon">&#128205;</div>
+          <div class="flow-title">Live barangay alerts</div>
+          <div class="flow-desc">Dashboard shows each barangay as Normal, Warning, or Critical using current data.</div>
+        </div>
+        <div class="flow-arrow">&#8594;</div>
+        <div class="flow-step">
+          <div class="flow-icon">&#128200;</div>
+          <div class="flow-title">Flood prediction</div>
+          <div class="flow-desc">A trained model forecasts short-term flood risk for the selected barangay.</div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="js/config.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/liveData.js"></script>
+  <script src="js/home.js"></script>
+</body>
+</html>
